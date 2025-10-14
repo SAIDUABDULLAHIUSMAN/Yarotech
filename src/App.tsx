@@ -5,15 +5,22 @@ import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
 import { DashboardPage } from './pages/DashboardPage';
 import { SalesPage } from './pages/SalesPage';
+import { StaffSalesPage } from './pages/StaffSalesPage';
 import { ReportsPage } from './components/Reports/ReportsPage';
 import { SettingsPage } from './components/Settings/SettingsPage';
+import { ProductManagement } from './components/Admin/ProductManagement';
+import { TransactionMonitoring } from './components/Admin/TransactionMonitoring';
+import { AuditLog } from './components/Admin/AuditLog';
+import { MyTransactions } from './components/Staff/MyTransactions';
+import { useUserRole } from './hooks/useUserRole';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { role, loading: roleLoading } = useUserRole();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  if (loading) {
+  if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-gray-600 text-lg">Loading...</div>
@@ -25,12 +32,22 @@ function AppContent() {
     return <LoginForm />;
   }
 
+  const isAdmin = role === 'admin';
+
   const getPageTitle = () => {
     switch (currentPage) {
       case 'dashboard':
         return 'Dashboard';
       case 'sales':
         return 'Sales';
+      case 'my-transactions':
+        return 'My Transactions';
+      case 'products':
+        return 'Product Management';
+      case 'transactions':
+        return 'All Transactions';
+      case 'audit':
+        return 'Audit Log';
       case 'reports':
         return 'Reports';
       case 'settings':
@@ -41,17 +58,34 @@ function AppContent() {
   };
 
   const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <DashboardPage />;
-      case 'sales':
-        return <SalesPage />;
-      case 'reports':
-        return <ReportsPage />;
-      case 'settings':
-        return <SettingsPage />;
-      default:
-        return <DashboardPage />;
+    if (isAdmin) {
+      switch (currentPage) {
+        case 'dashboard':
+          return <DashboardPage />;
+        case 'products':
+          return <ProductManagement />;
+        case 'sales':
+          return <SalesPage />;
+        case 'transactions':
+          return <TransactionMonitoring />;
+        case 'audit':
+          return <AuditLog />;
+        case 'reports':
+          return <ReportsPage />;
+        case 'settings':
+          return <SettingsPage />;
+        default:
+          return <DashboardPage />;
+      }
+    } else {
+      switch (currentPage) {
+        case 'dashboard':
+          return <StaffSalesPage />;
+        case 'my-transactions':
+          return <MyTransactions />;
+        default:
+          return <StaffSalesPage />;
+      }
     }
   };
 
@@ -62,6 +96,7 @@ function AppContent() {
         onNavigate={setCurrentPage}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        isAdmin={isAdmin}
       />
 
       <div className="flex-1 flex flex-col min-w-0">

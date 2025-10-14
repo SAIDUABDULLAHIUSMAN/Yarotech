@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingCart, FileText, Settings, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, FileText, Settings, LogOut, X, Package, Users, Shield, History } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
@@ -6,17 +6,28 @@ interface SidebarProps {
   onNavigate: (page: string) => void;
   isOpen: boolean;
   onClose: () => void;
+  isAdmin: boolean;
 }
 
-export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: SidebarProps) {
+export function Sidebar({ currentPage, onNavigate, isOpen, onClose, isAdmin }: SidebarProps) {
   const { signOut } = useAuth();
 
-  const menuItems = [
+  const adminMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'sales', label: 'Sales', icon: ShoppingCart },
+    { id: 'products', label: 'Products', icon: Package },
+    { id: 'sales', label: 'Create Sale', icon: ShoppingCart },
+    { id: 'transactions', label: 'All Transactions', icon: Users },
+    { id: 'audit', label: 'Audit Log', icon: Shield },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+
+  const staffMenuItems = [
+    { id: 'dashboard', label: 'New Sale', icon: ShoppingCart },
+    { id: 'my-transactions', label: 'My Sales', icon: History },
+  ];
+
+  const menuItems = isAdmin ? adminMenuItems : staffMenuItems;
 
   const handleNavigation = (page: string) => {
     onNavigate(page);
@@ -43,7 +54,9 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: SidebarPro
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div>
               <h1 className="text-xl font-bold text-gray-800">YAROTECH</h1>
-              <p className="text-xs text-gray-500">Sales System</p>
+              <p className="text-xs text-gray-500">
+                {isAdmin ? 'Admin Panel' : 'Staff Panel'}
+              </p>
             </div>
             <button
               onClick={onClose}
@@ -53,7 +66,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: SidebarPro
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPage === item.id;

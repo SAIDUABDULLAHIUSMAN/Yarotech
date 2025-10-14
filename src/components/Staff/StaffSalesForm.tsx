@@ -1,0 +1,377 @@
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, ShoppingCart } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface SaleItem {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
+interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  unit_price: number;
+  stock_quantity: number;
+  category: string | null;
+}
+
+interface StaffSalesFormProps {
+  onSaleCreated: (saleId: string) => void;
+}
+
+export function StaffSalesForm({ onSaleCreated }: StaffSalesFormProps) {
+  const { user } = useAuth();
+  const [customerName, setCustomerName] = useState('');
+  const [items, setItems] = useState<SaleItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [issuerName, setIssuerName] = useState('');
+
+  useEffect(() => {
+    loadProducts();
+    loadUserProfile();
+  }, []);
+
+  const loadProducts = async () => {
+    const { data } = await supabase
+      .from('products')
+      .select('id, sku, name, unit_price, stock_quantity, category')
+      .eq('is_active', true)
+      .order('name');
+
+    if (data) setProducts(data);
+  };
+
+  const loadUserProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (data) setIssuerName(data.full_name);
+  };
+
+  const addItem = () => {
+    if (products.length === 0) return;
+
+    const firstProduct = products[0];
+    setItems([
+      ...items,
+      {
+        product_id: firstProduct.id,
+        product_name: firstProduct.name,
+        quantity: 1,
+        unit_price: firstProduct.unit_price,
+        total_price: firstProduct.unit_price,
+      },
+    ]);
+  };
+
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const updateItem = (index: number, field: keyof SaleItem, value: string | number) => {
+    const newItems = [...items];
+    const item = newItems[index];
+
+    if (field === 'product_id') {
+      const product = products.find((p) => p.id === value);
+      if (product) {
+        item.product_id = product.id;
+        item.product_name = product.name;
+        item.unit_price = product.unit_price;
+        item.total_price = item.quantity * product.unit_price;
+      }
+    } else if (field === 'quantity') {
+      item.quantity = Number(value);
+      item.total_price = item.quantity * item.unit_price;
+    }
+
+    setItems(newItems);
+  };
+
+  const calculateTotal = () => {
+    return items.reduce((sum, item) => sum + item.total_price, 0);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!customerName.trim()) {
+      setError('Customer name is required');
+      return;
+    }
+
+    if (items.length === 0) {
+      setError('Add at least one item');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const totalAmount = calculateTotal();
+
+      const { data: saleData, error: saleError } = await supabase
+        .from('sales')
+        .insert({
+          customer_name: customerName,
+          issuer_id: user?.id,
+          issuer_name: issuerName,
+          total_amount: totalAmount,
+          status: 'completed',
+        })
+        .select()
+        .single();
+
+      if (saleError) throw saleError;
+
+      const saleItems = items.map((item) => ({
+        sale_id: saleData.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('sale_items')
+        .insert(saleItems);
+
+      if (itemsError) throw itemsError;
+
+      setCustomerName('');
+      setItems([]);
+      onSaleCreated(saleData.id);
+    } catch (err) {
+      setError('Failed to create sale. Please try again.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <ShoppingCart size={28} className="text-blue-600" />
+          <h3 className="text-2xl font-semibold text-gray-800">New Sale</h3>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter customer name"
+              required
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Items <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={addItem}
+                className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                <Plus size={16} />
+                <span>Add Item</span>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {items.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <p className="text-gray-500">Click "Add Item" to start creating a sale</p>
+                </div>
+              ) : (
+                <>
+                  <div className="hidden md:grid md:grid-cols-12 gap-2 px-3 text-xs font-medium text-gray-600 uppercase">
+                    <div className="col-span-5">Product</div>
+                    <div className="col-span-2">Quantity</div>
+                    <div className="col-span-2">Price (Fixed)</div>
+                    <div className="col-span-2">Total</div>
+                    <div className="col-span-1"></div>
+                  </div>
+
+                  {items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-50 p-4 rounded-lg space-y-3 md:space-y-0"
+                    >
+                      <div className="md:hidden">
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Product
+                            </label>
+                            <select
+                              value={item.product_id}
+                              onChange={(e) => updateItem(index, 'product_id', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            >
+                              {products.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                  {product.name} - {product.category || 'Uncategorized'}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Quantity
+                              </label>
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                min="1"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Price (Fixed)
+                              </label>
+                              <div className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium">
+                                N {item.unit_price.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Total
+                            </label>
+                            <div className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm font-bold text-blue-900">
+                              N {item.total_price.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                          >
+                            <Trash2 size={16} />
+                            <span className="text-sm font-medium">Remove Item</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="hidden md:grid md:grid-cols-12 gap-2 items-center">
+                        <div className="col-span-5">
+                          <select
+                            value={item.product_id}
+                            onChange={(e) => updateItem(index, 'product_id', e.target.value)}
+                            className="w-full px-2 py-2 border border-gray-300 rounded text-sm"
+                          >
+                            {products.map((product) => (
+                              <option key={product.id} value={product.id}>
+                                {product.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                            className="w-full px-2 py-2 border border-gray-300 rounded text-sm"
+                            min="1"
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <div className="w-full px-2 py-2 bg-gray-200 border border-gray-300 rounded text-sm font-medium text-center">
+                            N {item.unit_price.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+
+                        <div className="col-span-2">
+                          <div className="w-full px-2 py-2 bg-blue-50 border border-blue-200 rounded text-sm font-bold text-blue-900 text-center">
+                            N {item.total_price.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+
+                        <div className="col-span-1 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+
+          {items.length > 0 && (
+            <div className="flex justify-end">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-8 py-4 rounded-lg w-full md:w-auto border-2 border-blue-200">
+                <p className="text-sm text-blue-700 text-center md:text-left font-medium">
+                  Grand Total
+                </p>
+                <p className="text-3xl font-bold text-blue-900 text-center md:text-left">
+                  N {calculateTotal().toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || items.length === 0}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+          >
+            {loading ? 'Processing Sale...' : 'Complete Sale'}
+          </button>
+        </form>
+
+        <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+          <p className="text-sm text-yellow-800">
+            <strong>Note:</strong> Product prices are set by administrators and cannot be modified.
+            You can only adjust the quantity for each item.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

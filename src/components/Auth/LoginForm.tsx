@@ -39,6 +39,13 @@ export function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
         <div className="text-center mb-6">
+          <div className="flex justify-center mb-4">
+            <img
+              src="/yarotech logo copy.png"
+              alt="Yarotech Logo"
+              className="h-24 w-24 object-contain"
+            />
+          </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">YAROTECH</h1>
           <p className="text-gray-600">Sales Management System</p>
         </div>
