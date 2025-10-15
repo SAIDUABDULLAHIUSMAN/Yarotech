@@ -103,6 +103,25 @@ export function SalesForm({ onSaleCreated }: SalesFormProps) {
     return items.reduce((sum, item) => sum + item.total_price, 0);
   };
 
+  const sendEmailNotification = async (saleId: string) => {
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sale-notification`;
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ saleId }),
+      });
+    } catch (err) {
+      console.error('Failed to send email notification:', err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -150,6 +169,8 @@ export function SalesForm({ onSaleCreated }: SalesFormProps) {
         .insert(saleItems);
 
       if (itemsError) throw itemsError;
+
+      sendEmailNotification(saleData.id);
 
       setCustomerName('');
       setItems([]);

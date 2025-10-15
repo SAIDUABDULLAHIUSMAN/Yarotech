@@ -16,6 +16,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose, isAdmin }: S
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products', label: 'Products', icon: Package },
     { id: 'sales', label: 'Create Sale', icon: ShoppingCart },
+    { id: 'sales-history', label: 'Sales History', icon: History },
     { id: 'transactions', label: 'All Transactions', icon: Users },
     { id: 'audit', label: 'Audit Log', icon: Shield },
     { id: 'reports', label: 'Reports', icon: FileText },

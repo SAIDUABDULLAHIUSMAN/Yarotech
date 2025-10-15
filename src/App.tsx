@@ -12,6 +12,8 @@ import { ProductManagement } from './components/Admin/ProductManagement';
 import { TransactionMonitoring } from './components/Admin/TransactionMonitoring';
 import { AuditLog } from './components/Admin/AuditLog';
 import { MyTransactions } from './components/Staff/MyTransactions';
+import { SalesHistory } from './components/Sales/SalesHistory';
+import { AdminSalesHistory } from './components/Admin/AdminSalesHistory';
 import { useUserRole } from './hooks/useUserRole';
 
 function AppContent() {
@@ -40,6 +42,8 @@ function AppContent() {
         return 'Dashboard';
       case 'sales':
         return 'Sales';
+      case 'sales-history':
+        return 'Sales History';
       case 'my-transactions':
         return 'My Transactions';
       case 'products':
@@ -66,6 +70,8 @@ function AppContent() {
           return <ProductManagement />;
         case 'sales':
           return <SalesPage />;
+        case 'sales-history':
+          return <AdminSalesHistory />;
         case 'transactions':
           return <TransactionMonitoring />;
         case 'audit':
@@ -82,7 +88,7 @@ function AppContent() {
         case 'dashboard':
           return <StaffSalesPage />;
         case 'my-transactions':
-          return <MyTransactions />;
+          return <SalesHistory />;
         default:
           return <StaffSalesPage />;
       }
