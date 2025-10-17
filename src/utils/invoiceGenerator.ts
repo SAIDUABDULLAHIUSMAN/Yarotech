@@ -90,63 +90,61 @@ export async function generateInvoicePDF(
   ]);
 
   autoTable(doc, {
-    startY: margin.top + 65,
-    head: [['Qty', 'Item Name', 'Unit Price', 'Total']],
-    body: tableData,
-    theme: 'striped',
-    headStyles: {
-      fillColor: [41, 128, 185],
-      textColor: 255,
-      fontStyle: 'bold',
-      halign: 'center',
-    },
-    bodyStyles: {
-      fontSize: 10,
-      cellPadding: 4,
-    },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    columnStyles: {
-      0: { cellWidth: 20, halign: 'center' },
-      1: { cellWidth: 'auto' },
-      2: { cellWidth: 40, halign: 'right' },
-      3: { cellWidth: 40, halign: 'right' },
-    },
-    margin: { left: margin.left, right: margin.right },
-    didDrawPage: () => {
-      // Footer with page number
-      doc.setFontSize(8);
-      doc.text(
-        `Page ${doc.internal.getNumberOfPages()}`,
-        pageWidth - margin.right,
-        pageHeight - 10,
-        { align: 'right' }
-      );
-    },
-  });
+  startY: margin.top + 65,
+  head: [['Qty', 'Item Name', 'Unit Price', 'Total']],
+  body: tableData,
+  theme: 'grid', // grid looks sharper for invoices
+  margin: { left: margin.left, right: margin.right },
 
-  const finalY = (doc as any).lastAutoTable.finalY || margin.top + 65;
+  // Header styling
+  headStyles: {
+    fillColor: [41, 128, 185], // deep blue
+    textColor: 255,
+    fontStyle: 'bold',
+    fontSize: 11,
+    halign: 'center',
+    valign: 'middle',
+    cellPadding: { top: 6, right: 4, bottom: 6, left: 4 },
+  },
 
-  // Grand Total
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Grand Total:', pageWidth - 70, finalY + 10);
-  doc.text(
-    `${companySettings.currency_symbol}${sale.total_amount.toFixed(2)}`,
-    pageWidth - margin.right,
-    finalY + 10,
-    { align: 'right' }
-  );
+  // Body styling
+  bodyStyles: {
+    fontSize: 10,
+    textColor: [40, 40, 40],
+    cellPadding: { top: 5, right: 4, bottom: 5, left: 4 },
+    valign: 'middle',
+  },
 
-  // Divider
-  doc.setLineWidth(0.5);
-  doc.line(margin.left, finalY + 15, pageWidth - margin.right, finalY + 15);
+  // Alternate row background
+  alternateRowStyles: {
+    fillColor: [250, 250, 250],
+  },
 
-  // Footer Message
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(9);
-  doc.text('Thank you for your business!', pageWidth / 2, pageHeight - 15, {
-    align: 'center',
-  });
+  // Column-specific widths and alignment
+  columnStyles: {
+    0: { cellWidth: 20, halign: 'center' }, // Qty
+    1: { cellWidth: pageWidth - (margin.left + margin.right + 100) }, // flexible Item Name
+    2: { cellWidth: 40, halign: 'right' }, // Unit Price
+    3: { cellWidth: 40, halign: 'right' }, // Total
+  },
+
+  // Table-wide styles
+  styles: {
+    lineWidth: 0.1,
+    lineColor: [200, 200, 200],
+  },
+
+  // Footer per page (page number)
+  didDrawPage: () => {
+    doc.setFontSize(8);
+    doc.text(
+      `Page ${doc.internal.getNumberOfPages()}`,
+      pageWidth - margin.right,
+      pageHeight - 10,
+      { align: 'right' }
+    );
+  },
+});
 
   return doc;
 }
