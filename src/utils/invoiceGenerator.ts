@@ -58,7 +58,7 @@ export async function generateInvoicePDF(
   doc.setFontSize(10);
   doc.text(`Invoice ID: ${sale.id.substring(0, 8).toUpperCase()}`, 10, 56);
   doc.text(
-    `Date: ${format(new Date(sale.created_at), 'dd MMMM yyyy, hh:mm A')}`,
+    `Date: ${format(new Date(sale.created_at), 'dd MMMM yyyy, hh:mm a')}`,
     10,
     62
   );
@@ -68,8 +68,8 @@ export async function generateInvoicePDF(
   const tableData = sale.items.map((item) => [
     item.quantity,
     item.product_name,
-    `${companySettings.currency_symbol}${item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    `${companySettings.currency_symbol}${item.total_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `${companySettings.currency_symbol}${item.unit_price.toFixed(2)}`,
+    `${companySettings.currency_symbol}${item.total_price.toFixed(2)}`,
   ]);
 
   autoTable(doc, {
@@ -98,9 +98,10 @@ export async function generateInvoicePDF(
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
+  doc.text('Grand Total:', pageWidth - 90, finalY + 10);
   doc.text(
-    `Grand Total: ${companySettings.currency_symbol}${sale.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    pageWidth - 10,
+    `${companySettings.currency_symbol}${sale.total_amount.toFixed(2)}`,
+    pageWidth - 50,
     finalY + 10,
     { align: 'right' }
   );
