@@ -99,7 +99,7 @@ export async function generateInvoicePDF(
   const metaX = pageWidth - margin;
   doc.text(`Invoice ID: ${sale.id.substring(0, 8).toUpperCase()}`, metaX, invoiceStartY, { align: 'right' });
   doc.text(
-    `Date: ${format(new Date(sale.created_at), 'dd MMM yyyy, hh:mm a')}`,
+    `Date: ${format(new Date(sale.created_at), 'dd MMMM yyyy, hh:mm A')}`,
     metaX,
     invoiceStartY + 6,
     { align: 'right' }
@@ -112,15 +112,15 @@ export async function generateInvoicePDF(
   const tableBody = sale.items.map((it) => [
     it.quantity.toString(),
     it.product_name,
-    `${companySettings.currency_symbol}${it.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-    `${companySettings.currency_symbol}${it.total_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+    `${companySettings.currency_symbol}${it.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `${companySettings.currency_symbol}${it.total_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
   ]);
 
   autoTable(doc, {
     startY: tableStartY,
-    head: [['Qty', 'Item Description', 'Unit Price', 'Total']],
+    head: [['Qty', 'Item Name', 'Unit Price', 'Total']],
     body: tableBody,
-    theme: 'striped',
+    theme: 'grid',
     styles: {
       font: 'helvetica',
       fontSize: 10,
@@ -135,12 +135,9 @@ export async function generateInvoicePDF(
       fontStyle: 'bold',
       halign: 'center',
     },
-    alternateRowStyles: {
-      fillColor: [250, 250, 250],
-    },
     columnStyles: {
       0: { cellWidth: 16, halign: 'center' }, // Qty
-      1: { cellWidth: contentWidth - 16 - 40 - 40 }, // Description flexible
+      1: { cellWidth: contentWidth - 16 - 40 - 40 }, // Item Name flexible
       2: { cellWidth: 40, halign: 'right' }, // Unit Price
       3: { cellWidth: 40, halign: 'right' }, // Total
     },
@@ -157,20 +154,16 @@ export async function generateInvoicePDF(
   const totalBoxX = pageWidth - margin - totalBoxWidth;
   const totalBoxY = finalY + 8;
 
-  // Light fill for grand total
-  doc.setFillColor(240, 248, 255);
-  doc.roundedRect(totalBoxX - 2, totalBoxY - 2, totalBoxWidth + 4, totalBoxHeight + 4, 1.5, 1.5, 'F');
-
-  // Draw label and amount
+  // Draw label and amount (removed fill and rounded rect for plain look)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(30);
-  doc.text('Grand Total', totalBoxX + 4, totalBoxY + 6);
+  doc.text('Grand Total:', totalBoxX + 4, totalBoxY + 6);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.text(
-    `${companySettings.currency_symbol}${sale.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+    `${companySettings.currency_symbol}${sale.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     pageWidth - margin - 4,
     totalBoxY + 6,
     { align: 'right' }
@@ -183,7 +176,7 @@ export async function generateInvoicePDF(
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(10);
   doc.setTextColor(110);
-  doc.text('Thank you for your business!', pageWidth / 2, totalBoxY + totalBoxHeight + 16, { align: 'center' });
+  doc.text('Thank you for your purchase!', pageWidth / 2, totalBoxY + totalBoxHeight + 16, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
