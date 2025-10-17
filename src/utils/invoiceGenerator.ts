@@ -26,10 +26,10 @@ interface Sale {
   items: SaleItem[];
 }
 
-export async function generateInvoicePDF(
+export function generateAndDownloadReceiptPDF(
   sale: Sale,
   companySettings: CompanySettings
-): Promise<jsPDF> {
+): void {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -60,7 +60,7 @@ export async function generateInvoicePDF(
   doc.setFontSize(10);
   doc.text(`Invoice ID: ${sale.id.substring(0, 8).toUpperCase()}`, 10, 58);
   doc.text(
-    `Date: ${format(new Date(sale.created_at), 'dd MMMM yyyy, hh:mm A')}`,
+    `Date: ${format(new Date(sale.created_at), 'dd MMMM yyyy, hh:mm a')}`,
     10,
     64
   );
@@ -71,8 +71,8 @@ export async function generateInvoicePDF(
   const tableData = sale.items.map((item) => [
     item.quantity,
     item.product_name,
-    `${companySettings.currency_symbol}${item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    `${companySettings.currency_symbol}${item.total_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `${companySettings.currency_symbol}${item.unit_price.toFixed(2)}`,
+    `${companySettings.currency_symbol}${item.total_price.toFixed(2)}`,
   ]);
 
   autoTable(doc, {
@@ -81,7 +81,7 @@ export async function generateInvoicePDF(
     body: tableData,
     theme: 'grid',
     headStyles: {
-      fillColor: [59, 130, 246], // Blue header as in the image
+      fillColor: [59, 130, 246], // Blue header to match the image
       textColor: 255,
       fontStyle: 'bold',
     },
@@ -103,7 +103,7 @@ export async function generateInvoicePDF(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.text(
-    `Grand Total: ${companySettings.currency_symbol}${sale.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `Grand Total: ${companySettings.currency_symbol}${sale.total_amount.toFixed(2)}`,
     pageWidth / 2,
     finalY + 10,
     { align: 'center' }
@@ -128,5 +128,32 @@ export async function generateInvoicePDF(
     { align: 'center' }
   );
 
-  return doc;
+  // Trigger download
+  doc.save(`Invoice_${sale.id.substring(0, 8).toUpperCase()}.pdf`);
 }
+
+// Example usage (uncomment to test)
+// const sampleSale: Sale = {
+//   id: 'e3434a86',
+//   customer_name: 'YARO',
+//   issuer_name: 'SAIDU USMAN',
+//   total_amount: 217000.00,
+//   created_at: '2025-10-12T09:37:00Z',
+//   items: [
+//     { product_name: 'Network Switch 8-Port', quantity: 2, unit_price: 25000.00, total_price: 50000.00 },
+//     { product_name: 'Networking Cable', quantity: 4, unit_price: 5000.00, total_price: 20000.00 },
+//     { product_name: 'Router Configuration', quantity: 3, unit_price: 15000.00, total_price: 45000.00 },
+//     { product_name: 'Technical Support', quantity: 4, unit_price: 8000.00, total_price: 32000.00 },
+//     { product_name: 'WiFi Access Point', quantity: 2, unit_price: 35000.00, total_price: 70000.00 },
+//   ],
+// };
+//
+// const sampleCompanySettings: CompanySettings = {
+//   company_name: 'YAROTECH NETWORK LIMITED',
+//   address: 'No. 122 Lukoro Plaza, Farm Center, Kano State',
+//   email: 'info@yarotech.com.ng',
+//   phone: '+234 814 024 4774',
+//   currency_symbol: '₦',
+// };
+//
+// generateAndDownloadReceiptPDF(sampleSale, sampleCompanySettings);
