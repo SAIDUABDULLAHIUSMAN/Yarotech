@@ -33,6 +33,7 @@ export async function generateInvoicePDF(
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
+  // Header: Centered company details
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.text(companySettings.company_name, pageWidth / 2, 20, { align: 'center' });
@@ -48,23 +49,25 @@ export async function generateInvoicePDF(
   );
 
   doc.setLineWidth(0.5);
-  doc.line(10, 38, pageWidth - 10, 38);
+  doc.line(10, 40, pageWidth - 10, 40);
 
+  // Invoice details
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text('INVOICE', 10, 48);
+  doc.text('INVOICE', 10, 50);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(`Invoice ID: ${sale.id.substring(0, 8).toUpperCase()}`, 10, 56);
+  doc.text(`Invoice ID: ${sale.id.substring(0, 8).toUpperCase()}`, 10, 58);
   doc.text(
     `Date: ${format(new Date(sale.created_at), 'dd MMMM yyyy, hh:mm A')}`,
     10,
-    62
+    64
   );
-  doc.text(`Customer: ${sale.customer_name}`, 10, 68);
-  doc.text(`Issued by: ${sale.issuer_name}`, 10, 74);
+  doc.text(`Customer: ${sale.customer_name}`, 10, 70);
+  doc.text(`Issued by: ${sale.issuer_name}`, 10, 76);
 
+  // Table of items
   const tableData = sale.items.map((item) => [
     item.quantity,
     item.product_name,
@@ -73,12 +76,12 @@ export async function generateInvoicePDF(
   ]);
 
   autoTable(doc, {
-    startY: 82,
+    startY: 85,
     head: [['Qty', 'Item Name', 'Unit Price', 'Total']],
     body: tableData,
     theme: 'grid',
     headStyles: {
-      fillColor: [59, 130, 246],
+      fillColor: [59, 130, 246], // Blue header as in the image
       textColor: 255,
       fontStyle: 'bold',
     },
@@ -94,20 +97,22 @@ export async function generateInvoicePDF(
     },
   });
 
-  const finalY = (doc as any).lastAutoTable.finalY || 82;
+  const finalY = (doc as any).lastAutoTable.finalY || 85;
 
+  // Grand Total
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.text(
     `Grand Total: ${companySettings.currency_symbol}${sale.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    pageWidth - 10,
+    pageWidth / 2,
     finalY + 10,
-    { align: 'right' }
+    { align: 'center' }
   );
 
   doc.setLineWidth(0.5);
   doc.line(10, finalY + 15, pageWidth - 10, finalY + 15);
 
+  // Footer
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(10);
   doc.text('Thank you for your purchase!', pageWidth / 2, finalY + 25, {
