@@ -2,7 +2,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
-import openSansBase64 from "./fonts/OpenSans-Regular.base64"; // make sure this path exists
+import openSansBase64 from "./OpenSans-Regular.base64"; // make sure this path exists
 
 interface SaleItem {
   product_name: string;
