@@ -1,3 +1,4 @@
+// /src/utils/generateInvoicePDF.ts
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
@@ -18,155 +19,114 @@ interface Sale {
 }
 
 export const generateInvoicePDF = (
-  sale: Sale, 
-  items: SaleItem[], 
+  sale: Sale,
+  items: SaleItem[],
   options: { returnPdfBlob?: boolean; logoUrl?: string } = {}
 ) => {
-  // Validation
-  if (!items || items.length === 0) {
-    console.warn("No items provided for invoice.");
-    return null;
-  }
-  if (isNaN(sale.total) || sale.total <= 0) {
-    console.warn("Invalid total amount.");
-    return null;
-  }
+  if (!items?.length) return console.warn("No items for invoice."), null;
+  if (isNaN(sale.total) || sale.total <= 0) return console.warn("Invalid total."), null;
   const saleDate = new Date(sale.sale_date);
-  if (isNaN(saleDate.getTime())) {
-    console.warn("Invalid sale date.");
-    return null;
-  }
+  if (isNaN(saleDate.getTime())) return console.warn("Invalid date."), null;
 
   const doc = new jsPDF();
   const { returnPdfBlob = false, logoUrl } = options;
-  
-  // Get company info from localStorage or use defaults
+
+  // Embed Unicode font (Roboto or NotoSans) - use your font file path here
+  // doc.addFileToVFS("NotoSans-Regular.ttf", notoFontBase64);
+  // doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
+  // doc.setFont("NotoSans", "normal");
+
   const companyName = localStorage.getItem("company_name") || "YAROTECH NETWORK LIMITED";
   const companyAddress = localStorage.getItem("company_address") || "No. 122 Lukoro Plaza, Farm Center, Kano State";
   const companyEmail = localStorage.getItem("company_email") || "info@yarotech.com.ng";
   const companyPhone = localStorage.getItem("company_phone") || "+234 814 024 4774";
 
-  // Set up colors
-  const primaryColor: [number, number, number] = [30, 64, 175]; // Navy blue
-  const accentColor: [number, number, number] = [59, 130, 246]; // Light blue
-  
+  const primaryColor: [number, number, number] = [30, 64, 175];
+
   // Header
-  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFillColor(...primaryColor);
   doc.rect(0, 0, 210, 40, "F");
-  
-  // Company name and optional logo
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
+  doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.text(companyName, 15, 20);
-  
-  // Add logo if provided (assumes base64 or URL; resize to fit)
+
   if (logoUrl) {
     try {
-      doc.addImage(logoUrl, "PNG", 15, 22, 15, 15); // Adjust size as needed
+      doc.addImage(logoUrl, "PNG", 170, 10, 25, 20);
     } catch (err) {
-      console.warn("Failed to add logo:", err);
+      console.warn("Logo error:", err);
     }
   }
-  
+
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(companyAddress, 15, 27);
   doc.text(`${companyEmail} | ${companyPhone}`, 15, 32);
-  
-  // Invoice title and number
+
+  // Invoice Info
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.text("INVOICE", 150, 20);
-  
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(`Invoice #: ${sale.id.slice(0, 8).toUpperCase()}`, 150, 27);
   doc.text(`Date: ${format(saleDate, "MMMM dd, yyyy")}`, 150, 32);
-  
-  // Reset text color for body
-  doc.setTextColor(0, 0, 0);
-  
-  // Bill To and Issued By sections
+
+  // Customer Info
   let yPos = 55;
-  
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11).setFont("helvetica", "bold");
   doc.text("BILL TO:", 15, yPos);
   doc.text("ISSUED BY:", 110, yPos);
-  
+
   yPos += 7;
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10).setFont("helvetica", "normal");
   doc.text(sale.customer_name, 15, yPos);
   doc.text(sale.issuer_name, 110, yPos);
-  
-  // Items table
+
+  // Table
   yPos += 15;
-  
   const tableData = items.map((item, index) => [
     (index + 1).toString(),
     item.product_name,
     item.quantity.toString(),
-    `₦${Number(item.unit_price).toLocaleString('en-NG')}`,
-    `₦${Number(item.subtotal).toLocaleString('en-NG')}`
+    `₦ ${item.unit_price.toLocaleString("en-NG")}`,
+    `₦ ${item.subtotal.toLocaleString("en-NG")}`
   ]);
-  
+
   autoTable(doc, {
     startY: yPos,
-    head: [["#", "Product", "Quantity", "Unit Price", "Subtotal"]],
+    head: [["#", "Product", "Qty", "Unit Price", "Subtotal"]],
     body: tableData,
     theme: "striped",
-    headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
-      fontStyle: "bold",
-      fontSize: 10,
-    },
-    bodyStyles: {
-      fontSize: 9,
-    },
+    headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: "bold" },
+    bodyStyles: { fontSize: 9 },
     columnStyles: {
-      0: { cellWidth: 15, halign: "center" },
-      1: { cellWidth: 70 },
-      2: { cellWidth: 25, halign: "center" },
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: 80 },
+      2: { cellWidth: 20, halign: "center" },
       3: { cellWidth: 40, halign: "right" },
       4: { cellWidth: 40, halign: "right" },
     },
     margin: { left: 15, right: 15 },
-    didDrawPage: (data) => {
-      // Add page numbers
-      const pageNum = doc.internal.getCurrentPageInfo().pageNumber;
-      doc.setFontSize(8);
-      doc.text(`Page ${pageNum}`, 105, doc.internal.pageSize.height - 10, { align: "center" });
-    }
   });
-  
-  // Total section
-  const finalY = (doc as any).lastAutoTable?.finalY || yPos + 50;
-  
-  doc.setFillColor(239, 246, 255);
-  doc.rect(130, finalY + 10, 65, 15, "F");
-  
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
+
+  const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+  // Total Box
+  doc.setFillColor(240, 248, 255);
+  doc.rect(130, finalY, 65, 15, "F");
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("TOTAL:", 135, finalY + 20);
-  doc.text(`₦${Number(sale.total).toLocaleString('en-NG')}`, 185, finalY + 20, { align: "right" });
-  
+  doc.setFontSize(14).setFont("helvetica", "bold");
+  doc.text("TOTAL:", 135, finalY + 10);
+  doc.text(`NGN ${sale.total.toLocaleString("en-NG")}`, 185, finalY + 10, { align: "right" });
+
   // Footer
-  doc.setTextColor(107, 114, 128);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "italic");
-  const footerY = doc.internal.pageSize.height - 25; // Adjusted for page num
+  const footerY = doc.internal.pageSize.height - 20;
+  doc.setFontSize(9).setFont("helvetica", "italic").setTextColor(107, 114, 128);
   doc.text("Thank you for your business!", 105, footerY, { align: "center" });
   doc.text("Generated by YaroTech Sales Manager", 105, footerY + 5, { align: "center" });
-  
-  // Export
+
   const fileName = `Invoice_${sale.id.slice(0, 8)}_${format(saleDate, "yyyyMMdd")}.pdf`;
-  if (returnPdfBlob) {
-    return doc.output("blob");
-  }
-  doc.save(fileName);
-  return doc;
+  return returnPdfBlob ? doc.output("blob") : doc.save(fileName);
 };
