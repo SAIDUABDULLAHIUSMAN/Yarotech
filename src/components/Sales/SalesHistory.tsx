@@ -89,16 +89,21 @@ export function SalesHistory() {
   };
 
   const handleDownloadInvoice = async (sale: Sale) => {
-    if (!companySettings) return;
+    try {
+      if (!companySettings) return;
 
-    let saleData = sale;
-    if (!sale.items) {
-      const items = await loadSaleItems(sale.id);
-      saleData = { ...sale, items };
+      let saleData = sale;
+      if (!sale.items) {
+        const items = await loadSaleItems(sale.id);
+        saleData = { ...sale, items };
+      }
+
+      const doc = await generateInvoicePDF(saleData, companySettings);
+      doc.save(`Invoice_${sale.id.substring(0, 8)}_${sale.customer_name}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate invoice:', err);
+      alert('Failed to generate invoice. Please try again.');
     }
-
-    const doc = await generateInvoicePDF(saleData, companySettings);
-    doc.save(`Invoice_${sale.id.substring(0, 8)}_${sale.customer_name}.pdf`);
   };
 
   if (loading) {

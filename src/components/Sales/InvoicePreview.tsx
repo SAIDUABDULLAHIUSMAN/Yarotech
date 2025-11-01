@@ -56,8 +56,8 @@ export function InvoicePreview({ saleId, onClose }: InvoicePreviewProps) {
       const doc = await generateInvoicePDF(sale, settings);
       doc.save(`Invoice_${sale.id.substring(0, 8)}.pdf`);
       setMessage('Invoice downloaded successfully!');
-    } catch (err) {
-      setMessage('Failed to generate invoice');
+    } catch (err: any) {
+      setMessage('Failed to generate invoice: ' + (err.message || 'Unknown error'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -70,7 +70,7 @@ export function InvoicePreview({ saleId, onClose }: InvoicePreviewProps) {
 
     try {
       const { sale, settings } = await fetchSaleData();
-      const doc = await generateInvoicePDF(sale, settings);
+      await generateInvoicePDF(sale, settings);
 
       setMessage(
         'Invoice generated! Note: Email functionality requires backend setup. PDF is ready for download.'
@@ -80,8 +80,8 @@ export function InvoicePreview({ saleId, onClose }: InvoicePreviewProps) {
         .from('sales')
         .update({ invoice_sent: true })
         .eq('id', saleId);
-    } catch (err) {
-      setMessage('Failed to send invoice');
+    } catch (err: any) {
+      setMessage('Failed to send invoice: ' + (err.message || 'Unknown error'));
       console.error(err);
     } finally {
       setEmailSending(false);
