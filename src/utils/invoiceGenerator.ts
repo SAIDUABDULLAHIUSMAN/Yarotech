@@ -165,7 +165,7 @@ export async function generateInvoicePDF(
       3: { cellWidth: 38, halign: "right" },
       4: { cellWidth: 35, halign: "right" },
     },
-    margin: { left: 15, right: 15 },
+    margin: { left: 20, right: 20 },
     didDrawPage: () => {
       const pageNum = doc.internal.getCurrentPageInfo().pageNumber;
       doc.setFontSize(8).setTextColor(120, 120, 120);
