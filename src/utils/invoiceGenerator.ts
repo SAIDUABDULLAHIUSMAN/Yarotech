@@ -151,7 +151,7 @@ export async function generateInvoicePDF(
     head: [["S/N", "Product", "Qty", "Unit Price", "Total"]],
     body: tableData,
     theme: "striped",
-    styles: { fontSize: 9, cellPadding: 3 },
+    styles: { fontSize: 9, cellPadding: 5 },
     headStyles: {
       fillColor: primaryColor,
       textColor: [255, 255, 255],
