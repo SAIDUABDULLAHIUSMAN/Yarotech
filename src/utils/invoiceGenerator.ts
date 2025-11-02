@@ -116,7 +116,7 @@ export async function generateInvoicePDF(
   doc.setFont("helvetica", "bold");
   const companyNameX = logoDataUrl ? 40 : 15;
   doc.text(companyName, companyNameX, 20);
-  doc.setFontSize(5).setFont("helvetica", "normal");
+  doc.setFontSize(9).setFont("helvetica", "normal");
   doc.text(companyAddress, companyNameX, 27);
   doc.text(`${companyEmail} | ${companyPhone}`, companyNameX, 32);
 
