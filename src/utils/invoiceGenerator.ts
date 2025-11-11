@@ -67,57 +67,84 @@ export async function generateInvoicePDF(
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const primaryColor: [number, number, number] = [30, 64, 175]; // deep blue
+  const headerColor: [number, number, number] = [40, 40, 40]; // dark gray
+  const borderColor: [number, number, number] = [0, 0, 0]; // black
+  const lightGray: [number, number, number] = [245, 245, 245]; // light gray for alternating rows
   const currencySymbol = companySettings?.currency_symbol || "₦";
+  const margin = 15;
 
-  // --- HEADER ---
-  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.rect(0, 0, pageWidth, 45, "F");
+  // --- HEADER SECTION ---
+  let yPos = margin;
+
+  // Company header background
+  doc.setFillColor(245, 245, 245);
+  doc.rect(margin, yPos, pageWidth - 2 * margin, 30, "F");
+  doc.setDrawColor(...borderColor);
+  doc.setLineWidth(0.5);
+  doc.rect(margin, yPos, pageWidth - 2 * margin, 30);
 
   let logoDataUrl: string | null = null;
   if (companySettings?.logo_url)
     logoDataUrl = await imageUrlToDataUrl(companySettings.logo_url);
 
-  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", 15, 10, 20, 20);
+  if (logoDataUrl)
+    doc.addImage(logoDataUrl, "PNG", margin + 2, yPos + 2, 12, 12);
 
   const companyName = companySettings?.company_name || "YAROTECH NETWORK LIMITED";
   const companyAddress = companySettings?.address || "No. 122 Lukoro Plaza, Farm Center, Kano State";
   const companyEmail = companySettings?.email || "info@yarotech.com.ng";
   const companyPhone = companySettings?.phone || "+234 814 024 4774";
 
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...headerColor);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text(companyName, 40, 18);
+  doc.setFontSize(14);
+  doc.text(companyName, logoDataUrl ? margin + 16 : margin + 2, yPos + 6);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(companyAddress, 40, 25);
-  doc.text(`${companyEmail} | ${companyPhone}`, 40, 30);
+  doc.setFontSize(8);
+  doc.text(companyAddress, logoDataUrl ? margin + 16 : margin + 2, yPos + 12);
+  doc.text(`${companyEmail} | ${companyPhone}`, logoDataUrl ? margin + 16 : margin + 2, yPos + 17);
 
+  doc.setTextColor(...headerColor);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("INVOICE", pageWidth - 15, 18, { align: "right" });
+  doc.setFontSize(16);
+  doc.text("INVOICE", pageWidth - margin - 2, yPos + 8, { align: "right" });
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  yPos += 32;
+
+  // --- INVOICE DETAILS ---
   const invoiceNumber = sale.id.substring(0, 8).toUpperCase();
-  doc.text(`Invoice #: ${invoiceNumber}`, pageWidth - 15, 25, { align: "right" });
-  doc.text(`Date: ${format(saleDate, "MMMM dd, yyyy")}`, pageWidth - 15, 30, { align: "right" });
+
+  // Invoice number and date box
+  doc.setFillColor(245, 245, 245);
+  doc.rect(margin, yPos, pageWidth - 2 * margin, 12, "F");
+  doc.setDrawColor(...borderColor);
+  doc.setLineWidth(0.5);
+  doc.rect(margin, yPos, pageWidth - 2 * margin, 12);
+
+  doc.setTextColor(...headerColor);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text(`Invoice #: ${invoiceNumber}`, margin + 3, yPos + 5.5);
+  doc.text(`Date: ${format(saleDate, "dd MMM yyyy")}`, pageWidth - margin - 3, yPos + 5.5, { align: "right" });
+
+  yPos += 15;
 
   // --- BILLING SECTION ---
-  let yPos = 60;
-  doc.setTextColor(0, 0, 0);
+  doc.setTextColor(...headerColor);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("BILL TO:", 15, yPos);
-  doc.text("ISSUED BY:", pageWidth / 2 + 10, yPos);
+  doc.setFontSize(9);
+  doc.text("BILL TO:", margin + 2, yPos);
+  doc.text("ISSUED BY:", pageWidth / 2 + 2, yPos);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
   yPos += 6;
-  doc.text(sale.customer_name || "-", 15, yPos);
-  doc.text(sale.issuer_name || "-", pageWidth / 2 + 10, yPos);
+  doc.text(sale.customer_name || "-", margin + 2, yPos);
+  doc.text(sale.issuer_name || "-", pageWidth / 2 + 2, yPos);
+
+  yPos += 10;
 
   // --- TABLE ---
   const tableData = items.map((item, index) => [
@@ -129,65 +156,98 @@ export async function generateInvoicePDF(
   ]);
 
   autoTable(doc, {
-    startY: yPos + 10,
+    startY: yPos,
     head: [["#", "Product", "Qty", "Unit Price", "Total"]],
     body: tableData,
-    theme: "striped",
+    theme: "grid",
     styles: {
-      fontSize: 9,
-      cellPadding: 3,
+      fontSize: 10,
+      cellPadding: 3.5,
       textColor: [0, 0, 0],
-      lineColor: [220, 220, 220],
-      lineWidth: 0.1,
+      lineColor: borderColor,
+      lineWidth: 0.5,
+      font: "helvetica",
+      halign: "left",
+      valign: "middle",
     },
     headStyles: {
-      fillColor: primaryColor,
+      fillColor: headerColor,
       textColor: [255, 255, 255],
       fontSize: 10,
       fontStyle: "bold",
       halign: "center",
+      lineColor: borderColor,
+      lineWidth: 0.5,
     },
-    alternateRowStyles: { fillColor: [245, 247, 255] },
+    bodyStyles: {
+      lineColor: borderColor,
+      lineWidth: 0.5,
+    },
+    alternateRowStyles: {
+      fillColor: lightGray,
+      textColor: [0, 0, 0],
+    },
     columnStyles: {
-      0: { cellWidth: 10, halign: "center" },
-      1: { cellWidth: 90 },
-      2: { cellWidth: 20, halign: "center" },
-      3: { cellWidth: 35, halign: "right" },
-      4: { cellWidth: 35, halign: "right" },
+      0: { cellWidth: 12, halign: "center" },
+      1: { cellWidth: 85, halign: "left" },
+      2: { cellWidth: 18, halign: "center" },
+      3: { cellWidth: 30, halign: "right" },
+      4: { cellWidth: 30, halign: "right" },
     },
-    margin: { left: 15, right: 15 },
+    margin: { left: margin, right: margin, top: 5, bottom: 5 },
+    didDrawPage: (data) => {
+      // Ensure black borders on all cells
+      const rows = data.body.concat(data.head);
+      rows.forEach((row) => {
+        row.cells.forEach((cell) => {
+          cell.border = [1, 1, 1, 1];
+        });
+      });
+    },
   });
 
   const finalY = (doc as any).lastAutoTable.finalY || yPos + 40;
 
-  // --- TOTAL BOX ---
-  const boxX = pageWidth - 85;
-  const boxWidth = 70;
-  const boxHeight = 20;
-  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  // --- TOTALS SECTION ---
+  yPos = finalY + 8;
+  const totalsX = pageWidth - margin - 80;
+
+  // Subtotal
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text("Subtotal:", totalsX, yPos);
+  doc.text(formatCurrency(sale.total_amount, currencySymbol), pageWidth - margin - 3, yPos, { align: "right" });
+
+  yPos += 6;
+
+  // Total box
+  doc.setFillColor(headerColor[0], headerColor[1], headerColor[2]);
+  doc.setDrawColor(...borderColor);
   doc.setLineWidth(0.5);
-  doc.rect(boxX, finalY + 10, boxWidth, boxHeight, "S");
+  doc.rect(totalsX, yPos, 80, 10, "F");
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("TOTAL:", boxX + 5, finalY + 22);
-  doc.text(
-    formatCurrency(sale.total_amount, currencySymbol),
-    pageWidth - 18,
-    finalY + 22,
-    { align: "right" }
-  );
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text("TOTAL:", totalsX + 3, yPos + 6.5);
+  doc.text(formatCurrency(sale.total_amount, currencySymbol), pageWidth - margin - 3, yPos + 6.5, { align: "right" });
 
   // --- FOOTER ---
-  const footerY = pageHeight - 25;
+  yPos = pageHeight - 18;
+  doc.setDrawColor(...borderColor);
+  doc.setLineWidth(0.5);
+  doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+
   doc.setFont("helvetica", "italic");
   doc.setFontSize(9);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Thank you for your business!", pageWidth / 2, footerY, { align: "center" });
+  doc.setTextColor(80, 80, 80);
+  doc.text("Thank you for your business!", pageWidth / 2, yPos + 2, { align: "center" });
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text(`Generated by ${companyName}`, pageWidth / 2, footerY + 5, { align: "center" });
+  doc.setTextColor(120, 120, 120);
+  doc.text(`© ${new Date().getFullYear()} ${companyName}. All rights reserved.`, pageWidth / 2, yPos + 6, { align: "center" });
 
   return doc;
 }
