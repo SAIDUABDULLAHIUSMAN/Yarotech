@@ -169,6 +169,7 @@ export async function generateInvoicePDF(
       font: "helvetica",
       halign: "left",
       valign: "middle",
+      overflow: "linebreak",
     },
     headStyles: {
       fillColor: headerColor,
@@ -195,15 +196,6 @@ export async function generateInvoicePDF(
       4: { cellWidth: 30, halign: "right" },
     },
     margin: { left: margin, right: margin, top: 5, bottom: 5 },
-    didDrawPage: (data) => {
-      // Ensure black borders on all cells
-      const rows = data.body.concat(data.head);
-      rows.forEach((row) => {
-        row.cells.forEach((cell) => {
-          cell.border = [1, 1, 1, 1];
-        });
-      });
-    },
   });
 
   const finalY = (doc as any).lastAutoTable.finalY || yPos + 40;
