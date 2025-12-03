@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Download, Mail } from 'lucide-react';
+import { Download, Mail, Printer } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { generateInvoicePDF } from '../../utils/invoiceGenerator';
+import { generateInvoicePDF, generateThermalReceiptPDF } from '../../utils/invoiceGenerator';
 
 interface InvoicePreviewProps {
   saleId: string;
@@ -10,6 +10,7 @@ interface InvoicePreviewProps {
 
 export function InvoicePreview({ saleId, onClose }: InvoicePreviewProps) {
   const [loading, setLoading] = useState(false);
+  const [thermalLoading, setThermalLoading] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -61,6 +62,23 @@ export function InvoicePreview({ saleId, onClose }: InvoicePreviewProps) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadThermal = async () => {
+    setThermalLoading(true);
+    setMessage('');
+
+    try {
+      const { sale, settings } = await fetchSaleData();
+      const doc = await generateThermalReceiptPDF(sale, settings);
+      doc.save(`Receipt_${sale.id.substring(0, 8)}.pdf`);
+      setMessage('Thermal receipt downloaded successfully!');
+    } catch (err: any) {
+      setMessage('Failed to generate receipt: ' + (err.message || 'Unknown error'));
+      console.error(err);
+    } finally {
+      setThermalLoading(false);
     }
   };
 
@@ -120,6 +138,15 @@ export function InvoicePreview({ saleId, onClose }: InvoicePreviewProps) {
           >
             <Download size={20} />
             <span>{loading ? 'Generating...' : 'Download Invoice'}</span>
+          </button>
+
+          <button
+            onClick={handleDownloadThermal}
+            disabled={thermalLoading}
+            className="w-full flex items-center justify-center space-x-2 bg-amber-600 text-white py-3 rounded-lg font-medium hover:bg-amber-700 transition disabled:opacity-50"
+          >
+            <Printer size={20} />
+            <span>{thermalLoading ? 'Generating...' : 'Thermal Receipt (80mm)'}</span>
           </button>
 
           <button

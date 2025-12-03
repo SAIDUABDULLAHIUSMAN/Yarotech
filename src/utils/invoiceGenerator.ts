@@ -244,4 +244,142 @@ export async function generateInvoicePDF(
   return doc;
 }
 
+export async function generateThermalReceiptPDF(
+  sale: Sale,
+  companySettings?: CompanySettings
+): Promise<jsPDF> {
+  const items = sale.items || [];
+  if (items.length === 0) throw new Error("No items provided for receipt.");
+
+  const saleDate = new Date(sale.created_at);
+  if (isNaN(saleDate.getTime())) throw new Error("Invalid sale date.");
+
+  const doc = new jsPDF({ unit: "mm", format: [80, 200] });
+  const pageWidth = 80;
+  const margin = 3;
+  const contentWidth = pageWidth - 2 * margin;
+  const currencySymbol = companySettings?.currency_symbol || "₦";
+
+  let yPos = margin;
+
+  const companyName = companySettings?.company_name || "YAROTECH NETWORK LIMITED";
+  const companyAddress = companySettings?.address || "No. 122 Lukoro Plaza, Farm Center, Kano State";
+  const companyEmail = companySettings?.email || "info@yarotech.com.ng";
+  const companyPhone = companySettings?.phone || "+234 814 024 4774";
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(companyName, pageWidth / 2, yPos, { align: "center", maxWidth: contentWidth });
+  yPos += 6;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.text(companyAddress, pageWidth / 2, yPos, { align: "center", maxWidth: contentWidth });
+  yPos += 3.5;
+
+  doc.setFontSize(6.5);
+  doc.text(companyEmail, pageWidth / 2, yPos, { align: "center", maxWidth: contentWidth });
+  yPos += 2.5;
+  doc.text(companyPhone, pageWidth / 2, yPos, { align: "center", maxWidth: contentWidth });
+  yPos += 4;
+
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 3;
+
+  const invoiceNumber = sale.id.substring(0, 8).toUpperCase();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.text(`INVOICE #: ${invoiceNumber}`, margin, yPos);
+  doc.text(`Date: ${format(saleDate, "dd/MM/yyyy")}`, pageWidth - margin, yPos, { align: "right" });
+  yPos += 4;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.text(`Customer: ${sale.customer_name || "-"}`, margin, yPos);
+  yPos += 3;
+  doc.text(`Staff: ${sale.issuer_name || "-"}`, margin, yPos);
+  yPos += 4;
+
+  doc.setLineWidth(0.3);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 3;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  const headerLineSpacing = 2.5;
+
+  const descriptionWidth = 30;
+  const qtyWidth = 12;
+  const priceWidth = contentWidth - descriptionWidth - qtyWidth;
+
+  doc.text("ITEM", margin, yPos);
+  doc.text("QTY", margin + descriptionWidth, yPos);
+  doc.text("PRICE", margin + descriptionWidth + qtyWidth, yPos, { align: "right" });
+  yPos += 3;
+
+  doc.setLineWidth(0.2);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 2;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+
+  items.forEach((item) => {
+    const itemName = item.product_name || "-";
+    const maxCharsPerLine = 28;
+
+    if (itemName.length > maxCharsPerLine) {
+      const firstLine = itemName.substring(0, maxCharsPerLine);
+      const secondLine = itemName.substring(maxCharsPerLine, maxCharsPerLine * 2);
+
+      doc.text(firstLine, margin, yPos);
+      yPos += 2.5;
+
+      if (secondLine) {
+        doc.text(secondLine, margin, yPos);
+        yPos += 2.5;
+      }
+    } else {
+      doc.text(itemName, margin, yPos);
+      yPos += 2.5;
+    }
+
+    const lineContent = `${item.quantity.toString().padStart(3)} ${formatCurrency(item.total_price, currencySymbol).padStart(15)}`;
+    doc.text(lineContent, margin, yPos, { maxWidth: contentWidth });
+    yPos += 2.5;
+  });
+
+  doc.setLineWidth(0.3);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 3;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  const totalText = formatCurrency(sale.total_amount, currencySymbol);
+  const totalLabel = "TOTAL:";
+
+  doc.text(totalLabel, margin, yPos);
+  doc.text(totalText, pageWidth - margin, yPos, { align: "right" });
+  yPos += 4;
+
+  doc.setLineWidth(0.3);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 4;
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(6.5);
+  doc.setTextColor(60, 60, 60);
+  doc.text("Thank you for your business!", pageWidth / 2, yPos, { align: "center", maxWidth: contentWidth });
+  yPos += 3;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  doc.text(`Generated: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, pageWidth / 2, yPos, { align: "center", maxWidth: contentWidth });
+
+  return doc;
+}
+
 export default generateInvoicePDF;

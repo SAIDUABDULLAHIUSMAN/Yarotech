@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { FileText, Download, Eye, Calendar, User, DollarSign, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { FileText, Download, Eye, Calendar, User, DollarSign, ChevronDown, ChevronUp, Filter, Printer } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { generateInvoicePDF } from '../../utils/invoiceGenerator';
+import { generateInvoicePDF, generateThermalReceiptPDF } from '../../utils/invoiceGenerator';
 import { format } from 'date-fns';
 
 interface SaleItem {
@@ -127,6 +127,24 @@ export function AdminSalesHistory() {
     } catch (err) {
       console.error('Failed to generate invoice:', err);
       alert('Failed to generate invoice. Please try again.');
+    }
+  };
+
+  const handleDownloadThermalReceipt = async (sale: Sale) => {
+    try {
+      if (!companySettings) return;
+
+      let saleData = sale;
+      if (!sale.items) {
+        const items = await loadSaleItems(sale.id);
+        saleData = { ...sale, items };
+      }
+
+      const doc = await generateThermalReceiptPDF(saleData, companySettings);
+      doc.save(`Receipt_${sale.id.substring(0, 8)}_${sale.customer_name}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate thermal receipt:', err);
+      alert('Failed to generate thermal receipt. Please try again.');
     }
   };
 
@@ -268,7 +286,7 @@ export function AdminSalesHistory() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap justify-end">
                       <button
                         onClick={() => toggleExpand(sale.id)}
                         className="flex items-center space-x-1 px-3 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition text-sm"
@@ -291,6 +309,13 @@ export function AdminSalesHistory() {
                       >
                         <Download size={16} />
                         <span>Invoice</span>
+                      </button>
+                      <button
+                        onClick={() => handleDownloadThermalReceipt(sale)}
+                        className="flex items-center space-x-1 px-3 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition text-sm"
+                      >
+                        <Printer size={16} />
+                        <span>Receipt</span>
                       </button>
                     </div>
                   </div>
