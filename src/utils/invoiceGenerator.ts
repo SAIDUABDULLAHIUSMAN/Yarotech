@@ -256,7 +256,7 @@ export async function generateThermalReceiptPDF(
 
   const doc = new jsPDF({ unit: "mm", format: [80, 200] });
   const pageWidth = 80;
-  const margin = 2;
+  const margin = 3;
   const contentWidth = pageWidth - 2 * margin;
   const currencySymbol = companySettings?.currency_symbol || "₦";
 
@@ -287,84 +287,87 @@ export async function generateThermalReceiptPDF(
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.3);
   doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 2.5;
+  yPos += 3;
 
   const invoiceNumber = sale.id.substring(0, 8).toUpperCase();
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
-  doc.text(`INV: ${invoiceNumber}`, margin, yPos);
-  doc.text(`${format(saleDate, "dd/MM/yy")}`, pageWidth - margin, yPos, { align: "right" });
-  yPos += 3;
+  doc.text(`INVOICE #: ${invoiceNumber}`, margin, yPos);
+  doc.text(`Date: ${format(saleDate, "dd/MM/yyyy")}`, pageWidth - margin, yPos, { align: "right" });
+  yPos += 4;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.5);
-  doc.text(`Cust: ${sale.customer_name || "-"}`, margin, yPos);
-  yPos += 2.5;
-  doc.text(`Staff: ${sale.issuer_name || "-"}`, margin, yPos);
+  doc.text(`Customer: ${sale.customer_name || "-"}`, margin, yPos);
   yPos += 3;
+  doc.text(`Staff: ${sale.issuer_name || "-"}`, margin, yPos);
+  yPos += 4;
 
   doc.setLineWidth(0.3);
   doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 2;
+  yPos += 3;
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
+  doc.setFontSize(7);
+  const headerLineSpacing = 2.5;
 
-  const col1X = margin + 1;
-  const col2X = margin + 15;
-  const col3X = margin + 22;
-  const col4X = pageWidth - margin - 1;
+  const descriptionWidth = 30;
+  const qtyWidth = 12;
+  const priceWidth = contentWidth - descriptionWidth - qtyWidth;
 
-  doc.text("#", col1X, yPos);
-  doc.text("Product", col2X, yPos);
-  doc.text("Qty", col3X, yPos);
-  doc.text("Total", col4X, yPos, { align: "right" });
-  yPos += 2.5;
+  doc.text("ITEM", margin, yPos);
+  doc.text("QTY", margin + descriptionWidth, yPos);
+  doc.text("PRICE", margin + descriptionWidth + qtyWidth, yPos, { align: "right" });
+  yPos += 3;
 
   doc.setLineWidth(0.2);
   doc.line(margin, yPos, pageWidth - margin, yPos);
   yPos += 2;
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(6);
+  doc.setFontSize(6.5);
 
-  items.forEach((item, index) => {
-    const itemNum = (index + 1).toString();
-    const itemName = (item.product_name || "-").substring(0, 13);
-    const qty = item.quantity.toString();
-    const total = formatCurrency(item.total_price, currencySymbol);
+  items.forEach((item) => {
+    const itemName = item.product_name || "-";
+    const maxCharsPerLine = 28;
 
-    doc.text(itemNum, col1X, yPos);
-    doc.text(itemName, col2X, yPos, { maxWidth: 8 });
-    doc.text(qty, col3X, yPos, { align: "center" });
-    doc.text(total, col4X, yPos, { align: "right" });
+    if (itemName.length > maxCharsPerLine) {
+      const firstLine = itemName.substring(0, maxCharsPerLine);
+      const secondLine = itemName.substring(maxCharsPerLine, maxCharsPerLine * 2);
+
+      doc.text(firstLine, margin, yPos);
+      yPos += 2.5;
+
+      if (secondLine) {
+        doc.text(secondLine, margin, yPos);
+        yPos += 2.5;
+      }
+    } else {
+      doc.text(itemName, margin, yPos);
+      yPos += 2.5;
+    }
+
+    const lineContent = `${item.quantity.toString().padStart(3)} ${formatCurrency(item.total_price, currencySymbol).padStart(15)}`;
+    doc.text(lineContent, margin, yPos, { maxWidth: contentWidth });
     yPos += 2.5;
-
-    const unitPrice = formatCurrency(item.unit_price, currencySymbol);
-    doc.setFontSize(5.5);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`@${unitPrice}`, col2X, yPos);
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(6);
-    yPos += 2;
   });
-
-  yPos += 1;
-  doc.setLineWidth(0.3);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 2;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  const totalText = formatCurrency(sale.total_amount, currencySymbol);
-
-  doc.text("TOTAL:", margin + 1, yPos);
-  doc.text(totalText, pageWidth - margin - 1, yPos, { align: "right" });
-  yPos += 4;
 
   doc.setLineWidth(0.3);
   doc.line(margin, yPos, pageWidth - margin, yPos);
   yPos += 3;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  const totalText = formatCurrency(sale.total_amount, currencySymbol);
+  const totalLabel = "TOTAL:";
+
+  doc.text(totalLabel, margin, yPos);
+  doc.text(totalText, pageWidth - margin, yPos, { align: "right" });
+  yPos += 4;
+
+  doc.setLineWidth(0.3);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 4;
 
   doc.setFont("helvetica", "italic");
   doc.setFontSize(6.5);
@@ -373,7 +376,7 @@ export async function generateThermalReceiptPDF(
   yPos += 3;
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(5.5);
+  doc.setFontSize(6);
   doc.text(`Generated: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, pageWidth / 2, yPos, { align: "center", maxWidth: contentWidth });
 
   return doc;
